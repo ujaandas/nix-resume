@@ -1,1 +1,7 @@
 .direnv
+result
+*.aux
+*.fdb_*
+*.fls
+*.log
+*.pdf
