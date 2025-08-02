@@ -16,33 +16,22 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        tex =
-          with pkgs;
-          texlive.combine {
-            inherit (texlive) scheme-basic latexmk;
-          };
+        lib = pkgs.lib;
+
+        builder = import ./build.nix { inherit pkgs; };
+        mkDoc = builder.mkDoc;
       in
       {
-        defaultPackage = pkgs.stdenv.mkDerivation {
-          name = "latex-document";
-          src = ./.;
-          nativeBuildInputs = [
-            tex
-          ];
-
-          buildPhase = ''
-            latexmk -pdf main.tex
-          '';
-
-          installPhase = ''
-            mkdir -p $out
-            cp main.pdf $out/
-          '';
+        packages = {
+          a = mkDoc [ ./src/content/work.tex ];
         };
+
+        defaultPackage = self.packages.a;
+
         devShell = pkgs.mkShell {
-          packages = [ tex ];
+          packages = with pkgs.texlive; [ (combine { inherit scheme-basic latexmk; }) ];
           shellHook = ''
-            echo Welcome to the tex devshell!
+            echo "Welcome to the tex devshell!"
           '';
         };
       }
