@@ -1,46 +1,53 @@
 { pkgs }:
-let
-  template = ./src/templates/a.tex;
 
-  mkInputs =
-    sections: pkgs.lib.concatStringsSep "\n" (map (f: "\\input{" + toString f + "}") sections);
+let
+  hasSubstr =
+    pat: s: builtins.isString pat && builtins.isString s && builtins.length (builtins.split pat s) > 1;
 
   mkDoc =
-    snippetFiles:
+    templateStr: sections:
     let
-      inputs = mkInputs snippetFiles;
+      lines = builtins.split "\n" templateStr;
+      sectionNames = builtins.attrNames sections;
 
-      mainTex = pkgs.writeText "main.tex" ''
-        \input{${toString template}}
-        ${inputs}
+      inject =
+        line:
+        let
+          matched = builtins.filter (t: hasSubstr ("\\\\section\\*\\{" + t + "\\}") line) sectionNames;
+        in
+        if matched != [ ] then
+          line
+          + "\n"
+          + builtins.concatStringsSep "\n" (
+            map (f: "\\input{" + toString f + "}") sections.${builtins.head matched}
+          )
+        else
+          line;
 
-        \end{document}
-      '';
+      allLines = builtins.map inject lines;
     in
-    pkgs.stdenv.mkDerivation {
-      name = "doc";
-      src = ./.;
+    builtins.concatStringsSep "\n" (builtins.filter builtins.isString allLines);
+in
+{
+  build =
+    attrs:
 
+    pkgs.stdenv.mkDerivation {
+      name = "tex-document";
+      src = ./.;
       nativeBuildInputs = [
-        (
-          with pkgs.texlive;
-          combine {
-            inherit scheme-basic latexmk;
-          }
-        )
+        (with pkgs.texlive; combine { inherit scheme-basic latexmk; })
       ];
 
       buildPhase = ''
-        cp ${mainTex} main.tex
+        echo "${mkDoc (builtins.readFile attrs.template) attrs.sections}" > main.tex
         latexmk -pdf main.tex
       '';
 
       installPhase = ''
         mkdir -p $out
+        cp main.tex $out/
         cp main.pdf $out/
       '';
     };
-in
-{
-  mkDoc = mkDoc;
 }
