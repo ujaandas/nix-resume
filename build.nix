@@ -1,6 +1,8 @@
 { pkgs }:
 
 let
+  common = ./src/common.tex;
+
   hasSubstr =
     pat: s: builtins.isString pat && builtins.isString s && builtins.length (builtins.split pat s) > 1;
 
@@ -40,7 +42,8 @@ in
       ];
 
       buildPhase = ''
-        echo "${mkDoc (builtins.readFile attrs.template) attrs.sections}" > main.tex
+        cat ${common} > main.tex
+        echo "${mkDoc (builtins.readFile attrs.template) attrs.sections}" >> main.tex
         latexmk -pdf main.tex
       '';
 
