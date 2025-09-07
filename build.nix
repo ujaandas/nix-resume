@@ -37,14 +37,32 @@ in
     pkgs.stdenv.mkDerivation {
       name = "tex-document";
       src = ./.;
+
       nativeBuildInputs = [
-        (with pkgs.texlive; combine { inherit scheme-basic latexmk; })
+        (
+          with pkgs.texlive;
+          combine {
+            inherit
+              scheme-basic
+              latexmk
+              collection-fontsrecommended
+
+              geometry
+              xcharter
+              xstring
+              xkeyval
+              mweights
+              fontaxes
+              enumitem
+              ;
+          }
+        )
       ];
 
       buildPhase = ''
         cat ${common} > main.tex
         echo "${mkDoc (builtins.readFile attrs.template) attrs.sections}" >> main.tex
-        latexmk -pdf main.tex
+        latexmk -pdf main.tex 
       '';
 
       installPhase = ''
